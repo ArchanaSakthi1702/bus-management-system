@@ -27,7 +27,12 @@ class Student(Base):
     phone_number = Column(String, nullable=True)  # <-- New column
 
     # Relationship to attendance table
-    attendances = relationship("Attendance", back_populates="student")
+    attendances = relationship(
+        "Attendance",
+        back_populates="student",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
 
 
 # -----------------------
@@ -37,7 +42,7 @@ class Attendance(Base):
     __tablename__ = "attendances"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     date = Column(Date, nullable=False, server_default=func.current_date())
 
     # Morning attendance
