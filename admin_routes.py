@@ -121,7 +121,7 @@ async def mark_attendance(
     now = datetime.now()
     today = now.date()
     current_time = now.time()
-
+    print(current_time)
     # Fetch or create attendance record for today
     result = await db.execute(
         select(Attendance).where(Attendance.student_id == student.id, Attendance.date == today)
