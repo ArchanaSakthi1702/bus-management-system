@@ -6,20 +6,22 @@ from sqlalchemy.future import select
 from database import get_db
 from models import Student
 from auth import decode_token
+from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 
 # --------------------------
 # OAuth2 scheme for Authorization header: "Bearer <token>"
 # --------------------------
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/student/login")
+security=HTTPBearer()
 
 # --------------------------
 # Check if token is valid
 # --------------------------
-async def is_student_authorized(token: str = Depends(oauth2_scheme)):
+async def is_student_authorized(credentials:HTTPAuthorizationCredentials=Depends(security)):
     """
     Verifies if the student access token is valid.
     Returns the payload if valid, otherwise raises HTTPException.
     """
+    token=credentials.credentials
     payload = decode_token(token)
     if not payload or payload.get("type") != "access" or "student_id" not in payload:
         raise HTTPException(

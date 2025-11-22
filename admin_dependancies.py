@@ -1,24 +1,25 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database import get_db
 from models import Admin
+from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from auth import decode_token
 
 # --------------------------
 # OAuth2 scheme for Authorization header: "Bearer <token>"
 # --------------------------
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/login")
+security = HTTPBearer()
 
 # --------------------------
 # Check if token is valid
 # --------------------------
-async def is_authorized(token: str = Depends(oauth2_scheme)):
+async def is_authorized(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Verifies if the access token is valid.
     Returns the payload if valid, otherwise raises HTTPException.
     """
+    token = credentials.credentials
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(

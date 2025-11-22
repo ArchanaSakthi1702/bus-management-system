@@ -21,3 +21,11 @@ async def update_bus_location(data: GPSUpdate):
         "timestamp": datetime.now() 
     }
     return {"status": "success", "bus_id": data.bus_id}
+
+
+@gps_router.post("/clear-locations",dependencies=[Depends(is_admin)])
+async def clear_bus_location():
+    bus_locations.clear()
+    return {
+        "message":"Bus locations Deleted Successfully!"
+    }
