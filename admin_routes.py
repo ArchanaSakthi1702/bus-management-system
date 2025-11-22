@@ -13,6 +13,7 @@ import json
 from datetime import datetime,date
 from times import MORNING_START,MORNING_END,EVENING_END,EVENING_START
 from bus_location import bus_locations
+import pytz
 
 
 
@@ -104,7 +105,6 @@ async def upload_students(file: UploadFile = File(...), db: AsyncSession = Depen
 
     return {"created": len(created_students), "students": [s.id for s in created_students]}
 
-
 # --------------------------
 # Mark attendance
 @admin_router.post("/mark-attendance/{rfid_id}")
@@ -118,11 +118,14 @@ async def mark_attendance(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    now = datetime.now()
+    # IST Timezone
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
     today = now.date()
     current_time = now.time()
-    print(current_time)
-    # Fetch or create attendance record for today
+    print("IST current time:", current_time)
+
+    # Fetch or create attendance record
     result = await db.execute(
         select(Attendance).where(Attendance.student_id == student.id, Attendance.date == today)
     )
@@ -131,22 +134,24 @@ async def mark_attendance(
     if not attendance:
         attendance = Attendance(student_id=student.id, date=today)
         db.add(attendance)
-        await db.flush()  # get ID
+        await db.flush()
 
-    # Check morning
+    # Morning attendance
     if MORNING_START <= current_time <= MORNING_END:
         if attendance.morning_present:
             raise HTTPException(status_code=400, detail="Morning attendance already marked")
+
         attendance.morning_time = now
         attendance.morning_present = True
         await db.commit()
         await db.refresh(attendance)
         return {"message": "Morning attendance marked", "time": now}
 
-    # Check evening
+    # Evening attendance
     elif EVENING_START <= current_time <= EVENING_END:
         if attendance.evening_present:
             raise HTTPException(status_code=400, detail="Evening attendance already marked")
+
         attendance.evening_time = now
         attendance.evening_present = True
         await db.commit()
@@ -155,8 +160,6 @@ async def mark_attendance(
 
     else:
         raise HTTPException(status_code=400, detail="Attendance cannot be marked at this time")
-
-
 
 
 # --------------------------
@@ -302,14 +305,17 @@ async def update_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
     att = result.scalars().first()
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
+    
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
 
     if morning_present is not None:
         att.morning_present = morning_present
-        att.morning_time = att.morning_time or datetime.now() if morning_present else None
+        att.morning_time = now if morning_present else None
 
     if evening_present is not None:
         att.evening_present = evening_present
-        att.evening_time = att.evening_time or datetime.now() if evening_present else None
+        att.evening_time = now if evening_present else None
 
     await db.commit()
     await db.refresh(att)

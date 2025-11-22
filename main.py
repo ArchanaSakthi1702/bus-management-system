@@ -18,6 +18,8 @@ from times import (
     EVENING_NOTIFY_HOUR
                    )
 
+import pytz
+
 
 
 async def clear_bus_locations():
@@ -36,7 +38,7 @@ async def lifespan(app: FastAPI):
 
     # --------------------------
     # Start APScheduler
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Kolkata"))
 
     scheduler.add_job(morning_absent_routine, "cron", hour=MORNING_NOTIFY_HOUR, minute=MORNING_NOTIFY_MINUTE)
     scheduler.add_job(evening_absent_routine, "cron", hour=EVENING_NOTIFY_HOUR, minute=EVENING_NOTIFY_MINUTE)

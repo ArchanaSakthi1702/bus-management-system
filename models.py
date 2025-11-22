@@ -35,9 +35,6 @@ class Student(Base):
     )
 
 
-# -----------------------
-# Attendance Table
-# -----------------------
 class Attendance(Base):
     __tablename__ = "attendances"
 
@@ -46,22 +43,18 @@ class Attendance(Base):
     date = Column(Date, nullable=False, server_default=func.current_date())
 
     # Morning attendance
-    morning_time = Column(DateTime, nullable=True)
+    morning_time = Column(DateTime(timezone=True), nullable=True)
     morning_present = Column(Boolean, nullable=False, default=False)
 
     # Evening attendance
-    evening_time = Column(DateTime, nullable=True)
+    evening_time = Column(DateTime(timezone=True), nullable=True)
     evening_present = Column(Boolean, nullable=False, default=False)
 
-    # Relationship back to student
     student = relationship("Student", back_populates="attendances")
 
     __table_args__ = (
-        # Ensures only one attendance record per student per day
         UniqueConstraint('student_id', 'date', name='uix_student_date'),
     )
-
-
 
 # -----------------------
 # Bus Table
