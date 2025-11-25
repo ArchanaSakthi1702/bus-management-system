@@ -8,6 +8,7 @@ from models import Admin, Student, Attendance,Bus
 from admin_routes import admin_router
 from student_routes import student_router
 from bus_location import bus_locations,gps_router
+from refresh_route import refresh_router
 from notifications import evening_absent_routine,morning_absent_routine
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -82,6 +83,7 @@ app.add_middleware(
 app.include_router(admin_router)
 app.include_router(student_router)
 app.include_router(gps_router)
+app.include_router(refresh_router)
 # --------------------------
 # Example route
 @app.get("/")

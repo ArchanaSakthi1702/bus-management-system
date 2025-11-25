@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import async_session,get_db
 from models import Student,Bus,Attendance
 from student_dependancies import is_student
-from auth import create_access_token
+from auth import create_access_token,create_refresh_token
 from schemas import StudentLogin
 from bus_location import bus_locations
 
@@ -25,14 +25,19 @@ async def student_login(data: StudentLogin):
         if not student:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         # Create JWT token
-        token = create_access_token({"student_id": student.id, "name": student.name})
+        access_token = create_access_token({"student_id": student.id, "name": student.name})
+        refresh_token=create_refresh_token(data={
+            "student_id": student.id,
+            "name": student.name
+        })
 
         return {
             "status": "success",
             "student_id": student.id,
             "student_roll_no":student.roll_no,
             "name": student.name,
-            "access_token": token,
+            "access_token": access_token,
+            "refresh_token":refresh_token,
             "token_type": "bearer"
         }
     
@@ -56,6 +61,8 @@ async def get_bus_live_gps(bus_id: str):
     if not bus_data:
         raise HTTPException(status_code=404, detail="Bus not found or no GPS updates yet")
     return {"bus_id": bus_id, "location": bus_data}
+
+
 
 @student_router.get("/get=my-attendances")
 async def get_my_attendances(

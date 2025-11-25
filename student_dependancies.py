@@ -5,29 +5,58 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database import get_db
 from models import Student
-from auth import decode_token
-from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
-
-# --------------------------
-# OAuth2 scheme for Authorization header: "Bearer <token>"
-# --------------------------
-security=HTTPBearer()
+from auth import decode_token,security
+from fastapi.security import HTTPAuthorizationCredentials
 
 # --------------------------
 # Check if token is valid
 # --------------------------
-async def is_student_authorized(credentials:HTTPAuthorizationCredentials=Depends(security)):
-    """
-    Verifies if the student access token is valid.
-    Returns the payload if valid, otherwise raises HTTPException.
-    """
-    token=credentials.credentials
+async def is_student_authorized(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
     payload = decode_token(token)
-    if not payload or payload.get("type") != "access" or "student_id" not in payload:
+
+    # Invalid token (tampered/wrong signature)
+    if payload is None or payload.get("error") == "invalid":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
+            detail={
+                "message": "Token is invalid!",
+                "is_expired": False
+            }
         )
+
+    # Expired token
+    if payload.get("error") == "expired":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "message": "Token expired. Please refresh token.",
+                "is_expired": True
+            }
+        )
+
+    # Check token type
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "message": "Invalid token type",
+                "is_expired": False
+            }
+        )
+
+    # Check student-specific requirement
+    if "student_id" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "message": "Not authorized as a student",
+                "is_expired": False
+            }
+        )
+
     return payload
 
 # --------------------------

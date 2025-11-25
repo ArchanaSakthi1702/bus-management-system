@@ -1,31 +1,46 @@
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from fastapi.security import HTTPAuthorizationCredentials
 from database import get_db
 from models import Admin
-from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
-from auth import decode_token
 
-# --------------------------
-# OAuth2 scheme for Authorization header: "Bearer <token>"
-# --------------------------
-security = HTTPBearer()
+from auth import decode_token,security
 
 # --------------------------
 # Check if token is valid
 # --------------------------
 async def is_authorized(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """
-    Verifies if the access token is valid.
-    Returns the payload if valid, otherwise raises HTTPException.
-    """
     token = credentials.credentials
     payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
+
+    # Invalid token (tampered/modified/not correct signature)
+    if payload is None or payload.get("error") == "invalid":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
+            detail={
+                "message":"Token is invalid!",
+                "is_expired":False
+            }
         )
+
+    # Expired token (valid but expired time)
+    if payload.get("error") == "expired":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "message":"Token expired. Please refresh token.",
+                "is_expired":True
+            }
+        )
+
+    # Check token type
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type"
+        )
+
     return payload
 
 # --------------------------
