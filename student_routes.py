@@ -1,9 +1,10 @@
 
-from fastapi import APIRouter,HTTPException,Depends
+from fastapi import APIRouter,HTTPException,Depends,Query
+from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import async_session,get_db
-from models import Student,Bus
+from models import Student,Bus,Attendance
 from student_dependancies import is_student
 from auth import create_access_token
 from schemas import StudentLogin
@@ -56,5 +57,20 @@ async def get_bus_live_gps(bus_id: str):
         raise HTTPException(status_code=404, detail="Bus not found or no GPS updates yet")
     return {"bus_id": bus_id, "location": bus_data}
 
+@student_router.get("/get=my-attendances")
+async def get_my_attendances(
+    current_student: Student = Depends(is_student),
+    db: AsyncSession = Depends(get_db),
+    date_filter: date | None = Query(None),
+):
+    query = (
+        select(Attendance)
+        .where(Attendance.student_id == current_student.id)
+        .order_by(Attendance.date.desc())
+    )
 
+    if date_filter:
+        query = query.where(Attendance.date == date_filter)
 
+    result = await db.execute(query)
+    return result.scalars().all()
