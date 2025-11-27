@@ -280,29 +280,78 @@ async def list_attendance(
     student_name: str | None = Query(None),
     date_filter: date | None = Query(None),
 ):
-    query = select(Attendance).join(Student)
+    query = (
+        select(Attendance)
+        .join(Student)
+        .options(selectinload(Attendance.student))
+    )
+
     if student_name:
         query = query.where(Student.name.ilike(f"%{student_name}%"))
+    
     if date_filter:
         query = query.where(Attendance.date == date_filter)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    attendances = result.scalars().all()
+
+    # Return mapped list
+    return [
+        AttendanceResponse(
+            id=a.id,
+            student_id=a.student_id,
+            student_name=a.student.name,
+            date=a.date,
+            morning_present=a.morning_present,
+            morning_time=a.morning_time,
+            evening_present=a.evening_present,
+            evening_time=a.evening_time,
+        )
+        for a in attendances
+    ]
+
 
 
 @admin_router.get("/get-student-attendance/{attendance_id}", response_model=AttendanceResponse, dependencies=[Depends(is_admin)])
 async def get_attendance(attendance_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Attendance).where(Attendance.id == attendance_id))
+    query = (
+        select(Attendance)
+        .where(Attendance.id == attendance_id)
+        .options(selectinload(Attendance.student))
+    )
+    result = await db.execute(query)
     att = result.scalars().first()
+
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
-    return att
+
+    return AttendanceResponse(
+        id=att.id,
+        student_id=att.student_id,
+        student_name=att.student.name,
+        date=att.date,
+        morning_present=att.morning_present,
+        morning_time=att.morning_time,
+        evening_present=att.evening_present,
+        evening_time=att.evening_time,
+    )
 
 
 @admin_router.patch("/update-student-attendance/{attendance_id}", response_model=AttendanceResponse, dependencies=[Depends(is_admin)])
-async def update_attendance(attendance_id: int, db: AsyncSession = Depends(get_db), morning_present: bool | None = None, evening_present: bool | None = None):
-    result = await db.execute(select(Attendance).where(Attendance.id == attendance_id))
+async def update_attendance(
+    attendance_id: int, 
+    db: AsyncSession = Depends(get_db),
+    morning_present: bool | None = None, 
+    evening_present: bool | None = None
+):
+    query = (
+        select(Attendance)
+        .where(Attendance.id == attendance_id)
+        .options(selectinload(Attendance.student))
+    )
+    result = await db.execute(query)
     att = result.scalars().first()
+
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
     
@@ -319,7 +368,17 @@ async def update_attendance(attendance_id: int, db: AsyncSession = Depends(get_d
 
     await db.commit()
     await db.refresh(att)
-    return att
+
+    return AttendanceResponse(
+        id=att.id,
+        student_id=att.student_id,
+        student_name=att.student.name,
+        date=att.date,
+        morning_present=att.morning_present,
+        morning_time=att.morning_time,
+        evening_present=att.evening_present,
+        evening_time=att.evening_time,
+    )
 
 
 @admin_router.delete("/delete-attendance/{attendance_id}", status_code=204, dependencies=[Depends(is_admin)])
