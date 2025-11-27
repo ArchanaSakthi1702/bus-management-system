@@ -14,6 +14,7 @@ from datetime import datetime,date
 from times import MORNING_START,MORNING_END,EVENING_END,EVENING_START
 from bus_location import bus_locations
 import pytz
+from sqlalchemy.orm import selectinload
 
 
 
