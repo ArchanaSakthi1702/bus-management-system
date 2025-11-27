@@ -69,6 +69,7 @@ class StudentResponse(BaseModel):
 class AttendanceResponse(BaseModel):
     id: int
     student_id: int
+    student_name:str
     date: date
     morning_present: bool
     morning_time: Optional[datetime] = None
