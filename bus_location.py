@@ -11,7 +11,7 @@ gps_router=APIRouter(
 
 bus_locations: Dict[str, dict] = {}
 
-@gps_router.post("/update-bus-location",dependencies=[Depends(is_admin)])
+@gps_router.post("/update-bus-location")
 async def update_bus_location(data: GPSUpdate):
     """
     Receive GPS data from a bus and save in memory.
